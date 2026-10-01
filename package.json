@@ -1,0 +1,14 @@
+{
+  "name": "mb-checkbank",
+  "version": "1.0.0",
+  "main": "app.cjs",
+  "scripts": {
+    "start": "node app.cjs"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "moment-timezone": "^0.5.43",
+    "uuid": "^9.0.0",
+    "mbbank": "latest"
+  }
+}
