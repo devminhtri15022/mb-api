@@ -136,7 +136,7 @@ app.get("/api/history/:token", async (req, res) => {
   const token = String(req.params.token || "");
   const store = loadStore(); const acc = store[token];
   if (!acc) return res.status(404).json({ ok: false, error: "Token không tồn tại" });
-  const days = Math.min(7, Math.max(1, Number(req.query.days) || 1));
+  const days = Math.min(30, Math.max(1, Number(req.query.days) || 30));
   try {
     const mb = await getClient(token, acc);
     const to = moment().tz(TIME_ZONE); const from = to.clone().subtract(days, "days");
