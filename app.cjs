@@ -141,7 +141,13 @@ app.get("/api/history/:token", async (req, res) => {
     const mb = await getClient(token, acc);
     const to = moment().tz(TIME_ZONE); const from = to.clone().subtract(days, "days");
     const list = await mb.getTransactionsHistory({ accountNumber: acc.accountNo, fromDate: from.format("DD/MM/YYYY"), toDate: to.format("DD/MM/YYYY") });
-    const TranList = (Array.isArray(list) ? list : []).map(normalizeTx).filter((t) => t.creditAmount > 0).map((t) => ({ tranId: t.tranId, creditAmount: t.creditAmount, description: t.description, transactionDate: t.transactionDate }));
+    const TranList = (Array.isArray(list) ? list : []).map(normalizeTx).map((t) => ({ 
+      tranId: t.tranId, 
+      creditAmount: t.creditAmount, 
+      debitAmount: t.debitAmount,
+      description: t.description, 
+      transactionDate: t.transactionDate 
+    }));
     acc.lastUsedAt = Date.now(); saveStore(store);
     return res.json({ ok: true, TranList });
   } catch (e) { 
