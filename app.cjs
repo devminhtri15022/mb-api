@@ -136,12 +136,35 @@ app.get("/api/history/:token", async (req, res) => {
   const token = String(req.params.token || "");
   const store = loadStore(); const acc = store[token];
   if (!acc) return res.status(404).json({ ok: false, error: "Token không tồn tại" });
-  const days = Math.min(30, Math.max(1, Number(req.query.days) || 30));
+  const days = Math.min(60, Math.max(1, Number(req.query.days) || 30));
   try {
     const mb = await getClient(token, acc);
     const to = moment().tz(TIME_ZONE); const from = to.clone().subtract(days, "days");
-    const list = await mb.getTransactionsHistory({ accountNumber: acc.accountNo, fromDate: from.format("DD/MM/YYYY"), toDate: to.format("DD/MM/YYYY") });
-    const TranList = (Array.isArray(list) ? list : []).map(normalizeTx).map((t) => ({ 
+    const fromStr = from.format("DD/MM/YYYY");
+    const toStr = to.format("DD/MM/YYYY");
+    
+    let rawList = null;
+    try {
+      rawList = await mb.getTransactionsHistory({ accountNumber: acc.accountNo, fromDate: fromStr, toDate: toStr });
+    } catch (e) {
+      console.warn("[getTransactionsHistory error, trying mbRequest direct]", e?.message);
+    }
+
+    if (!Array.isArray(rawList)) {
+      try {
+        const direct = await mb.mbRequest({
+          path: "/api/retail-transactionms/transactionms/get-account-transaction-history",
+          json: { accountNo: acc.accountNo, fromDate: fromStr, toDate: toStr }
+        });
+        if (direct && Array.isArray(direct.transactionHistoryList)) {
+          rawList = direct.transactionHistoryList;
+        }
+      } catch (err) {
+        console.error("[mbRequest direct error]", err?.message);
+      }
+    }
+
+    const TranList = (Array.isArray(rawList) ? rawList : []).map(normalizeTx).map((t) => ({ 
       tranId: t.tranId, 
       creditAmount: t.creditAmount, 
       debitAmount: t.debitAmount,
@@ -149,7 +172,7 @@ app.get("/api/history/:token", async (req, res) => {
       transactionDate: t.transactionDate 
     }));
     acc.lastUsedAt = Date.now(); saveStore(store);
-    return res.json({ ok: true, TranList });
+    return res.json({ ok: true, count: TranList.length, TranList });
   } catch (e) { 
     sessionCache.delete(token); 
     return res.status(500).json({ ok: false, error: e?.message || String(e) }); 
